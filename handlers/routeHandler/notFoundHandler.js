@@ -1,0 +1,10 @@
+const handler = {}
+
+handler.notFoundHandler = (reqProperties, callback)=>{
+    callback(404, {
+        message: "route not found"
+    })
+    
+}
+
+module.exports = handler;

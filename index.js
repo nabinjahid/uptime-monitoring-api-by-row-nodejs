@@ -1,12 +1,11 @@
 const http = require("http")
+const environments = require("./helpers/environments")
 
 const {handleReqRes} = require("./helpers/handleReqRes")
 
 const app ={}
 
-app.config = {
-    port : 8000
-}
+app.config = environments
 
 // create server
 app.createServer = () =>{

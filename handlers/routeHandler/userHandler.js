@@ -1,6 +1,7 @@
 // dependencies
 const data = require("../../lib/data");
 const { hash } = require("../../helpers/utilities");
+const { _token } = require("./tokenHandler");
 
 // module scafolding
 const handler = {};
@@ -75,7 +76,6 @@ handler._users.post = (req, callback) => {
   }
 };
 // post request
-// @TODO: Authentication
 handler._users.get = (req, callback) => {
   // check the phone number if valid
   const phone =
@@ -84,26 +84,41 @@ handler._users.get = (req, callback) => {
       ? req.queryStringObject.phone.trim()
       : false;
 
-  if (phone) {
-    // lookup the user
-    data.read("users", phone, (err, userData) => {
-      if (!err && userData && Object.keys(userData).length > 0) {
-        delete userData.password;
-        callback(200, userData);
+  const token =
+    typeof req.headersObject.token === "string" &&
+    req.headersObject.token.trim().length === 20
+      ? req.headersObject.token
+      : false;
+
+  if (phone && token) {
+    // verify token
+    _token.verifyToken(token, phone, (isValid) => {
+      if (isValid) {
+        // lookup the user
+        data.read("users", phone, (err, userData) => {
+          if (!err && userData && Object.keys(userData).length > 0) {
+            delete userData.password;
+            callback(200, userData);
+          } else {
+            callback(400, {
+              message: "User data not found",
+            });
+          }
+        });
       } else {
         callback(400, {
-          message: "User data not found",
+          error: "Invalid token provided",
         });
       }
     });
   } else {
     callback(404, {
-      message: "Invalid phone number provided",
+      message:
+        "Invalid token or phone number provided or check token in the request header",
     });
   }
 };
 // put request
-// @TODO: Authentication
 handler._users.put = (req, callback) => {
   // check the phone number if valid
   const phone =
@@ -125,35 +140,50 @@ handler._users.put = (req, callback) => {
       ? req.body.password.trim()
       : false;
 
-  if (phone) {
-    if (firstName || lastName || password) {
-      // loopkup the user
-      data.read("users", phone, (err1, userData) => {
-        if (!err1 && userData) {
-          if (firstName) {
-            userData.firstName = firstName;
-          }
-          if (lastName) {
-            userData.lastName = lastName;
-          }
-          if (password) {
-            userData.password = hash(password);
-          }
-          // store to database
-          data.update("users", phone, userData, (err2) => {
-            if (!err2) {
-              callback(200, {
-                message: "User updated successfully",
+  const token =
+    typeof req.headersObject.token === "string" &&
+    req.headersObject.token.trim().length === 20
+      ? req.headersObject.token
+      : false;
+
+  if (phone && token) {
+    if (firstName || lastName || password || token) {
+      // verify token
+      _token.verifyToken(token, phone, (tokenIsValid) => {
+        if (tokenIsValid) {
+          // loopkup the user
+          data.read("users", phone, (err1, userData) => {
+            if (!err1 && userData) {
+              if (firstName) {
+                userData.firstName = firstName;
+              }
+              if (lastName) {
+                userData.lastName = lastName;
+              }
+              if (password) {
+                userData.password = hash(password);
+              }
+              // store to database
+              data.update("users", phone, userData, (err2) => {
+                if (!err2) {
+                  callback(200, {
+                    message: "User updated successfully",
+                  });
+                } else {
+                  callback(400, {
+                    error: "Could not update user",
+                  });
+                }
               });
             } else {
               callback(400, {
-                error: "Could not update user",
+                error: "User not found",
               });
             }
           });
         } else {
           callback(400, {
-            error: "User not found",
+            error: "Invalid token provided",
           });
         }
       });
@@ -164,7 +194,7 @@ handler._users.put = (req, callback) => {
     }
   } else {
     callback(400, {
-      error: "Invalid phone number. please try again",
+      error: "Either Phone or Token or both invalid",
     });
   }
 };
@@ -178,8 +208,17 @@ handler._users.delete = (req, callback) => {
       ? req.queryStringObject.phone.trim()
       : false;
 
-  if (phone) {
-    // lookup the user
+  const token =
+    typeof req.headersObject.token === "string" &&
+    req.headersObject.token.trim().length === 20
+      ? req.headersObject.token
+      : false;
+
+  if (phone && token) {
+    // check the token if valid
+    _token.verifyToken(token, phone, (isValid)=>{
+      if (isValid) {
+        // lookup the user
     data.read("users", phone, (err1, userData) => {
       if (!err1 && userData) {
         data.delete("users", phone, (err2) => {
@@ -195,9 +234,16 @@ handler._users.delete = (req, callback) => {
         callback(404, { message: "User not found" });
       }
     });
+      }else{
+        callback(400,{
+          error: "Invalid token provided"
+        })
+      }
+    })
+    
   } else {
     callback(400, {
-      message: "Invalid phone number",
+      message: "Either phone or token or both invalid",
     });
   }
 };

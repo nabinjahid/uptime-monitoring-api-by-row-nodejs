@@ -1,31 +1,51 @@
 // dependencies
-const crypto = require("crypto")
-const environments = require("./environments")
+const crypto = require("crypto");
+const environments = require("./environments");
 
 // moduel scafolding
-const utilities = {}
+const utilities = {};
 
 // hash string
-utilities.hash = (str)=>{
-    if(typeof str === 'string' && str.length >0){
-        const hash = crypto.createHmac('sha256', environments.secretKey).update(str).digest('hex');
-        return hash
-    }  
-    return false
-}
+utilities.hash = (str) => {
+  if (typeof str === "string" && str.length > 0) {
+    const hash = crypto
+      .createHmac("sha256", environments.secretKey)
+      .update(str)
+      .digest("hex");
+    return hash;
+  }
+  return false;
+};
 
-// parse Json string to object 
-utilities.parseJson = (jsonString)=>{
-    let output = {}
-    try {
-        output = JSON.parse(jsonString)
-        return output               
-    } catch (error) {   
-            output = {}
+// parse Json string to object
+utilities.parseJson = (jsonString) => {
+  let output = {};
+  try {
+    output = JSON.parse(jsonString);
+    return output;
+  } catch (error) {
+    output = {};
+  }
+  return output;
+};
+
+// random string
+utilities.createRandomStr = (stringLength) => {
+  const length =
+    typeof stringLength === "number" && stringLength > 0 ? stringLength : false;
+
+  if (length) {
+    const possibleChar = "abcdefghijklmnopqrstuvwxyz1234567890";
+    let output = "";
+    for (let i = 1; i <= length; i++) {
+      const randomChar = possibleChar.charAt(
+        Math.floor(Math.random() * possibleChar.length)
+      );
+      output += randomChar;
     }
     return output
-}
+  }
+  return false;
+};
 
-
-
-module.exports = utilities
+module.exports = utilities;
